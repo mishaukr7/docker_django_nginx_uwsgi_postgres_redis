@@ -1,0 +1,60 @@
+version: "3"
+services:
+  postgresdb:
+    container_name: db_for_user_${NAME}
+    image: postgres
+    restart: always
+    environment:
+      POSTGRES_PASSWORD: pass12pass
+      POSTGRES_USER: place_user
+      POSTGRES_DB: place_dev
+    ports:
+      - 5432
+#      - 1486
+    tty: true
+    stdin_open: true
+  redis:
+    image: redis
+    ports:
+      - 6379
+  django:
+    build: .
+    container_name: django_for_user_${NAME}
+    restart: always
+    command: uwsgi --ini uwsgi.ini
+    volumes:
+      - 'app_data:/app'
+    ports:
+      - ${PORT}:8000
+    tty: true
+    stdin_open: true
+    # command: python3 manage.py runserver 0.0.0.0:${PORT} --settings=test_1.settings
+    environment:
+      - ALLOWED_HOSTS=*
+      - SECRET_KEY=)erapej7_yzx8f(%6xbg!j+f%rr&(mp$a)w(*_b1n%fd&3ps@g
+      - DATABASE_NAME=place_dev
+      - DATABASE_USER=place_user
+      - DATABASE_PASSWORD=pass12pass
+      - DATABASE_HOST=postgresdb
+      - DATABASE_PORT=5432
+      - HOST_NAME=http://127.0.0.1:${PORT}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    depends_on:
+      - postgresdb
+  nginx:
+    container_name: cnginx_container_${NAME}
+    build: ./nginx
+    restart: always
+    ports:
+      - 80
+    volumes:
+      - '.:/data'
+      - './log:/var/log/nginx'
+      - 'app_data:/app'
+#      - '/static:/static'
+    depends_on:
+      - django
+
+volumes:
+  app_data:
